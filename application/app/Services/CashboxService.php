@@ -35,7 +35,8 @@ class CashboxService
     {
         return Cashbox::where("user_id", $user->id)
             ->orderByDesc("created_at")
-            ->get();
+            ->get()
+            ->toResourceCollection();
     }
 
     public function updateCashbox(User $user, Cashbox $cashbox, CashboxData $cashboxData)

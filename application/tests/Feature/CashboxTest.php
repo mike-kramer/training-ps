@@ -89,11 +89,14 @@ class CashboxTest extends TestCase
         $response = $this->actingAs($user)->get("/api/cashboxes");
         $response->assertOk();
         $data = $cashboxes->map(function (Cashbox $cashbox) {
-            return $cashbox->toArray();
+            $cashboxData = $cashbox->toArray();
+            unset($cashboxData["secret_key"]);
+            return $cashboxData;
         })->toArray();
         $response->assertJson([
             "data" => $data,
         ]);
+        $response->assertJsonMissingPath("data.0.secret_key");
     }
 
     public function testUpdateCashbox(): void
