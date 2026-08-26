@@ -29,6 +29,13 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::prefix("/cashboxes")
         ->as("cashbox.")
         ->group(function () {
-            Route::post("", [CashboxController::class, "create"]);
+            Route::get("", [CashboxController::class, "index"])->name("index");
+            Route::post("", [CashboxController::class, "create"])->name("create");
+            Route::put("{cashbox}", [CashboxController::class, "updateCashbox"])
+                ->middleware("can:update,cashbox")
+                ->name("update");
+            Route::delete("{cashbox}", [CashboxController::class, "deleteCashbox"])
+                ->middleware("can:delete,cashbox")
+                ->name("delete");
         });
 });

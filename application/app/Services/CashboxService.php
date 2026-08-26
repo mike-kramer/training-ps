@@ -30,4 +30,33 @@ class CashboxService
         $cashbox->save();
         $this->auditLogService->log("cashbox-created", $creator->id, cashbox_id: $cashbox->id);
     }
+
+    public function userCashboxes(User $user)
+    {
+        return Cashbox::where("user_id", $user->id)
+            ->orderByDesc("created_at")
+            ->get();
+    }
+
+    public function updateCashbox(User $user, Cashbox $cashbox, CashboxData $cashboxData)
+    {
+        $cashbox->fill((array)$cashboxData);
+        $cashbox->save();
+        $this->auditLogService->log(
+            "cashbox-updated",
+            $user->id,
+            cashbox_id: $cashbox->id,
+            parameters: (array) $cashboxData
+        );
+    }
+
+    public function deleteCashbox(User $user, Cashbox $cashbox): void
+    {
+        $cashbox->delete();
+        $this->auditLogService->log(
+            "cashbox-deleted",
+            $user->id,
+            cashbox_id: $cashbox->id,
+        );
+    }
 }

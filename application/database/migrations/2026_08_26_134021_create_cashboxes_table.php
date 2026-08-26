@@ -21,6 +21,8 @@ return new class extends Migration
             $table->string("secret_key")->unique();
             $table->timestamps();
 
+            $table->softDeletes();
+
             $table->unique(["user_id", "name"]);
         });
     }
