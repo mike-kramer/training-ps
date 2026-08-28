@@ -10,10 +10,11 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
 use Mockery\MockInterface;
 use Tests\TestCase;
+use Tests\Traits\WithAuditLogs;
 
 class PaymentCreationTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabase, WithAuditLogs;
 
     private User $user;
     private Cashbox $cashbox;
@@ -49,6 +50,15 @@ class PaymentCreationTest extends TestCase
             "amount" => 100000,
             "order_id" => "1"
         ]);
+        $this->assertLog(
+            "payment-created",
+            null,
+            null,
+            $this->cashbox->id,
+            parameters: [
+                "order_id" => "1"
+            ]
+        );
     }
 
     public function testInvalidSignature(): void
