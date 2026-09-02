@@ -27,6 +27,9 @@ Route::get('/user', function (Request $request) {
 
 Route::post("create-payment", \App\Http\Controllers\PaymentCreationController::class)->name("create-payment");
 
+Route::post("payments/{paymentId}/change-status", \App\Http\Controllers\PaymentProcessingController::class)
+    ->name("payments.change-status");
+
 Route::middleware(['auth:sanctum'])->group(function () {
     Route::prefix("/cashboxes")
         ->as("cashbox.")
