@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Services\PaymentProcessingService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 
@@ -14,6 +15,7 @@ class SendMerchantWebhook implements ShouldQueue
      */
     public function __construct(
         public int $payment_id,
+        public int $retry_number = 1
     )
     {
         //
@@ -22,8 +24,8 @@ class SendMerchantWebhook implements ShouldQueue
     /**
      * Execute the job.
      */
-    public function handle(): void
+    public function handle(PaymentProcessingService $service): void
     {
-        //
+        $service->sendStatusWebhook($this->payment_id, $this->retry_number);
     }
 }
