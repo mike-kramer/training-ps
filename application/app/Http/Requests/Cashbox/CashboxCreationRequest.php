@@ -18,6 +18,7 @@ class CashboxCreationRequest extends FormRequest
                 "max:255",
                 Rule::unique('cashboxes')
                     ->where(fn (Builder $query) => $query->where('user_id', $this->user()->id))
+                    ->ignore($this->route('cashbox')),
             ],
             "success_url" => ["required", "string", "max:255", "url"],
             "fail_url" => ["required", "string", "max:255", "url"],

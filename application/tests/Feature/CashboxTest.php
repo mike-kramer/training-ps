@@ -131,6 +131,61 @@ class CashboxTest extends TestCase
         $resp->assertForbidden();
     }
 
+    public function testUpdateCashboxKeepsSameName(): void
+    {
+        $user = User::factory()->create();
+        $cashbox = Cashbox::factory()->state([
+            "user_id" => $user->id,
+            "name" => "Stable Name",
+            "success_url" => "https://example.com/old-success",
+            "fail_url" => "https://example.com/old-fail",
+            "webhook_url" => "https://example.com/old-webhook",
+        ])->create();
+
+        $payload = [
+            "name" => "Stable Name",
+            "success_url" => "https://example.com/new-success",
+            "fail_url" => "https://example.com/new-fail",
+            "webhook_url" => "https://example.com/new-webhook",
+        ];
+
+        $response = $this->actingAs($user)->put("/api/cashboxes/{$cashbox->id}", $payload);
+        $response->assertOk();
+
+        $cashbox->refresh();
+        $this->assertEquals("Stable Name", $cashbox->name);
+        $this->assertEquals("https://example.com/new-success", $cashbox->success_url);
+        $this->assertEquals("https://example.com/new-fail", $cashbox->fail_url);
+        $this->assertEquals("https://example.com/new-webhook", $cashbox->webhook_url);
+    }
+
+    public function testUpdateCashboxRejectsDuplicateNameOfAnotherCashbox(): void
+    {
+        $user = User::factory()->create();
+        $existing = Cashbox::factory()->state([
+            "user_id" => $user->id,
+            "name" => "Taken Name",
+        ])->create();
+        $cashbox = Cashbox::factory()->state([
+            "user_id" => $user->id,
+            "name" => "Other Name",
+        ])->create();
+
+        $response = $this->actingAs($user)->put("/api/cashboxes/{$cashbox->id}", [
+            "name" => $existing->name,
+            "success_url" => "https://example.com/success",
+            "fail_url" => "https://example.com/fail",
+            "webhook_url" => "https://example.com/webhook",
+        ]);
+
+        $response->assertStatus(422);
+        $response->assertJsonValidationErrors(["name"]);
+        $this->assertDatabaseHas("cashboxes", [
+            "id" => $cashbox->id,
+            "name" => "Other Name",
+        ]);
+    }
+
     public function testDeleteCashbox(): void
     {
         $user = User::factory()->create();
