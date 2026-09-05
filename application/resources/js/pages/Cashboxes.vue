@@ -83,13 +83,22 @@
                 <h3 class="font-medium text-slate-900">{{ box.name }}</h3>
                 <p class="mt-1 text-xs text-slate-500">ID {{ box.id }}</p>
               </div>
-              <button
-                type="button"
-                class="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50"
-                @click="openReveal(box)"
-              >
-                Show secret
-              </button>
+              <div class="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  class="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50"
+                  @click="openEdit(box)"
+                >
+                  Edit
+                </button>
+                <button
+                  type="button"
+                  class="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50"
+                  @click="openReveal(box)"
+                >
+                  Show secret
+                </button>
+              </div>
             </div>
             <dl class="mt-3 grid gap-1 text-xs text-slate-500 sm:grid-cols-3">
               <div><dt class="inline font-medium text-slate-600">Success:</dt> {{ box.success_url }}</div>
@@ -105,6 +114,80 @@
           </li>
         </ul>
       </section>
+    </div>
+
+    <div
+      v-if="editTarget"
+      class="fixed inset-0 z-40 flex items-center justify-center bg-slate-900/40 p-4"
+      @click.self="editTarget = null"
+    >
+      <form
+        class="w-full max-w-lg space-y-3 rounded-xl bg-white p-5 shadow-lg"
+        @submit.prevent="updateCashbox"
+      >
+        <h3 class="text-lg font-semibold text-slate-900">Edit cashbox</h3>
+        <p class="text-sm text-slate-500">Update settings for «{{ editTarget.name }}».</p>
+        <div>
+          <label class="mb-1 block text-sm text-slate-700" for="edit_name">Name</label>
+          <input
+            id="edit_name"
+            v-model="editForm.name"
+            required
+            class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-100"
+          >
+          <p v-if="editErrors.name" class="mt-1 text-sm text-red-700">{{ editErrors.name[0] }}</p>
+        </div>
+        <div>
+          <label class="mb-1 block text-sm text-slate-700" for="edit_webhook_url">Webhook URL</label>
+          <input
+            id="edit_webhook_url"
+            v-model="editForm.webhook_url"
+            type="url"
+            required
+            class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-100"
+          >
+          <p v-if="editErrors.webhook_url" class="mt-1 text-sm text-red-700">{{ editErrors.webhook_url[0] }}</p>
+        </div>
+        <div>
+          <label class="mb-1 block text-sm text-slate-700" for="edit_success_url">Success URL</label>
+          <input
+            id="edit_success_url"
+            v-model="editForm.success_url"
+            type="url"
+            required
+            class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-100"
+          >
+          <p v-if="editErrors.success_url" class="mt-1 text-sm text-red-700">{{ editErrors.success_url[0] }}</p>
+        </div>
+        <div>
+          <label class="mb-1 block text-sm text-slate-700" for="edit_fail_url">Fail URL</label>
+          <input
+            id="edit_fail_url"
+            v-model="editForm.fail_url"
+            type="url"
+            required
+            class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-100"
+          >
+          <p v-if="editErrors.fail_url" class="mt-1 text-sm text-red-700">{{ editErrors.fail_url[0] }}</p>
+        </div>
+        <p v-if="editError" class="text-sm text-red-700">{{ editError }}</p>
+        <div class="flex justify-end gap-2 pt-1">
+          <button
+            type="button"
+            class="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50"
+            @click="editTarget = null"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            class="rounded-md bg-teal-700 px-4 py-2 text-sm font-medium text-white hover:bg-teal-800 disabled:opacity-60"
+            :disabled="updating"
+          >
+            {{ updating ? 'Saving…' : 'Save' }}
+          </button>
+        </div>
+      </form>
     </div>
 
     <div
@@ -162,6 +245,17 @@ const createForm = reactive({
   webhook_url: 'https://example.com/webhook',
 });
 
+const editTarget = ref(null);
+const updating = ref(false);
+const editError = ref('');
+const editErrors = ref({});
+const editForm = reactive({
+  name: '',
+  success_url: '',
+  fail_url: '',
+  webhook_url: '',
+});
+
 const revealTarget = ref(null);
 const revealPassword = ref('');
 const revealError = ref('');
@@ -191,6 +285,32 @@ async function createCashbox() {
     createError.value = errorMessage(error, 'Could not create cashbox');
   } finally {
     creating.value = false;
+  }
+}
+
+function openEdit(box) {
+  editTarget.value = box;
+  editForm.name = box.name;
+  editForm.success_url = box.success_url;
+  editForm.fail_url = box.fail_url;
+  editForm.webhook_url = box.webhook_url;
+  editError.value = '';
+  editErrors.value = {};
+}
+
+async function updateCashbox() {
+  updating.value = true;
+  editError.value = '';
+  editErrors.value = {};
+  try {
+    await api.put(`/cashboxes/${editTarget.value.id}`, { ...editForm });
+    editTarget.value = null;
+    await loadCashboxes();
+  } catch (error) {
+    editErrors.value = validationErrors(error) || {};
+    editError.value = errorMessage(error, 'Could not update cashbox');
+  } finally {
+    updating.value = false;
   }
 }
 
