@@ -2,11 +2,11 @@
 
 namespace App\Http\Controllers;
 
-use App\Data\Cashboxes\CashboxData;
 use App\Http\Requests\Cashbox\CashboxCreationRequest;
+use App\Http\Requests\Cashbox\RevealSecretRequest;
 use App\Models\Cashbox;
 use App\Services\CashboxService;
-use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 
 class CashboxController extends Controller
 {
@@ -33,5 +33,24 @@ class CashboxController extends Controller
     {
         $cashboxService->deleteCashbox(auth()->user(), $cashbox);
         return ["success" => true];
+    }
+
+    public function revealSecret(RevealSecretRequest $request, Cashbox $cashbox, CashboxService $cashboxService)
+    {
+        try {
+            $secretKey = $cashboxService->revealSecret(
+                auth()->user(),
+                $cashbox,
+                $request->validated('password'),
+            );
+        } catch (\Throwable) {
+            throw ValidationException::withMessages([
+                'password' => 'invalid password',
+            ]);
+        }
+
+        return [
+            'secret_key' => $secretKey,
+        ];
     }
 }

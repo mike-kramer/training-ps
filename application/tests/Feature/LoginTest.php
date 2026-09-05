@@ -20,6 +20,24 @@ class LoginTest extends TestCase
         ]);
         $response->assertStatus(200);
         $response->assertJsonStructure(["token"]);
+        $response->assertJsonPath("auth", "token");
+        $this->assertLog("logged-in", $user->id);
+    }
+
+    public function testSuccessfulCookieLogin()
+    {
+        $user = User::factory()->create();
+        $response = $this->withHeaders([
+            'Origin' => 'http://localhost',
+            'Referer' => 'http://localhost/',
+        ])->post("/api/auth/login", [
+            'email' => $user->email,
+            'password' => "password",
+        ]);
+        $response->assertStatus(200);
+        $response->assertJsonPath("auth", "cookie");
+        $response->assertJsonMissingPath("token");
+        $this->assertAuthenticatedAs($user, 'web');
         $this->assertLog("logged-in", $user->id);
     }
 

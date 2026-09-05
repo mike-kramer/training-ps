@@ -3,6 +3,7 @@
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CashboxController;
 use App\Http\Controllers\HealthController;
+use App\Http\Controllers\PaymentShowController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -19,6 +20,9 @@ Route::prefix("/auth")
             ->middleware(["throttle:login"]);
         Route::post("verify", [AuthController::class, "verifyEmail"])
             ->name("verify");
+        Route::post("/logout", [AuthController::class, "logout"])
+            ->name("logout")
+            ->middleware("auth:sanctum");
     });
 
 Route::get('/user', function (Request $request) {
@@ -26,6 +30,9 @@ Route::get('/user', function (Request $request) {
 })->middleware('auth:sanctum');
 
 Route::post("create-payment", \App\Http\Controllers\PaymentCreationController::class)->name("create-payment");
+
+Route::get("payments/{paymentId}", PaymentShowController::class)
+    ->name("payments.show");
 
 Route::post("payments/{paymentId}/change-status", \App\Http\Controllers\PaymentProcessingController::class)
     ->name("payments.change-status");
@@ -42,5 +49,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
             Route::delete("{cashbox}", [CashboxController::class, "deleteCashbox"])
                 ->middleware("can:delete,cashbox")
                 ->name("delete");
+            Route::post("{cashbox}/reveal-secret", [CashboxController::class, "revealSecret"])
+                ->middleware("can:update,cashbox")
+                ->name("reveal-secret");
         });
 });

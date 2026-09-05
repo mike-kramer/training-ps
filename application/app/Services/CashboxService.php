@@ -60,4 +60,16 @@ class CashboxService
             cashbox_id: $cashbox->id,
         );
     }
+
+    public function revealSecret(User $user, Cashbox $cashbox, string $password): string
+    {
+        $user->checkPassword($password);
+        $this->auditLogService->log(
+            "cashbox-secret-revealed",
+            $user->id,
+            cashbox_id: $cashbox->id,
+        );
+
+        return $cashbox->secret_key;
+    }
 }
