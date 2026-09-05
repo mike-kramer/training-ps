@@ -59,7 +59,7 @@ class PaymentProcessingService
             Http::withHeaders([
                 'X-Signature' => $signature,
                 'Content-Type' => 'application/json',
-            ])->throw()->post($webhookUrl, $data);
+            ])->post($webhookUrl, $data)->throw();
             $this->auditLogService->log(
                 "webhook-called",
                 null,
@@ -73,12 +73,22 @@ class PaymentProcessingService
             );
         } catch (ConnectionException | RequestException $exception) {
             if (
-                $retryNumber < 5 &&
-                (
-                    $exception instanceof ConnectionException ||
-                    $exception instanceof RequestException && $exception->response->status() >= 500
-                )
+                $exception instanceof RequestException
+                && $exception->response->status() < 500
             ) {
+                $this->auditLogService->log(
+                    "webhook-failed-with-40x-code",
+                    null,
+                    null,
+                    $payment->cashbox->id,
+                    parameters: [
+                        "code" => $exception->response->status(),
+                        "payment_id" => $payment->id,
+                        "status" => $payment->status,
+                        "url" => $payment->cashbox->webhook_url,
+                    ]
+                );
+            } elseif ($retryNumber < 5) {
                 SendMerchantWebhook::dispatch($payment_id, $retryNumber + 1)
                     ->delay(now()->addMinutes(2 ** ($retryNumber - 1)));
                 $this->auditLogService->log("webhook-failed-with-retry",
@@ -91,8 +101,7 @@ class PaymentProcessingService
                         "url" => $payment->cashbox->webhook_url,
                     ]
                 );
-            }
-            if ($retryNumber >= 5) {
+            } else {
                 $this->auditLogService->log("webhook-failed-5-times",
                     null,
                     null,

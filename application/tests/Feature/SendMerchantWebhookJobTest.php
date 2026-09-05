@@ -123,4 +123,27 @@ class SendMerchantWebhookJobTest extends TestCase
             ]
         );
     }
+
+    public function testInvalidWebhookCalling(): void
+    {
+        Http::fake([
+            '*' => Http::response(null, 404),
+        ]);
+        Queue::fake();
+        $service = app(PaymentProcessingService::class);
+        $job = new SendMerchantWebhook($this->payment->id, 5);
+        $job->handle($service);
+        Queue::assertNotPushed(SendMerchantWebhook::class);
+        $this->assertLog("webhook-failed-with-40x-code",
+            null,
+            null,
+            $this->cashbox->id,
+            parameters: [
+                "code" => 404,
+                "payment_id" => $this->payment->id,
+                "status" => $this->payment->status,
+                "url" => $this->cashbox->webhook_url,
+            ]
+        );
+    }
 }
