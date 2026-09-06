@@ -69,9 +69,9 @@ const formattedAmount = computed(() => {
   if (!payment.value) {
     return '';
   }
-  return new Intl.NumberFormat(undefined, {
+  return new Intl.NumberFormat('uz-UZ', {
     style: 'currency',
-    currency: 'USD',
+    currency: 'UZS',
     minimumFractionDigits: 2,
   }).format(payment.value.amount / 100);
 });
