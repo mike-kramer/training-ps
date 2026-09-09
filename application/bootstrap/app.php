@@ -17,7 +17,11 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->statefulApi();
     })
     ->withSchedule(function (Schedule $schedule): void {
-        $schedule->command("app:cancel-old-payments")->everyFiveMinutes();
+        $schedule->command('app:cancel-old-payments')->everyFiveMinutes();
+        // Metrics for Horizon dashboard — only when Redis queues are used (production).
+        $schedule->command('horizon:snapshot')
+            ->everyFiveMinutes()
+            ->when(fn () => config('queue.default') === 'redis');
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

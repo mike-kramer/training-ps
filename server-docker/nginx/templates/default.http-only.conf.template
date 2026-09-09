@@ -1,0 +1,34 @@
+# HTTP-only config used before the first Let's Encrypt certificate exists.
+# Switch NGINX_TEMPLATE=default.conf.template in .env after certbot succeeds.
+
+server {
+    listen 80;
+    server_name ${DOMAIN};
+
+    root /var/www/html/public;
+    index index.php;
+
+    charset utf-8;
+    client_max_body_size 32M;
+
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
+
+    location / {
+        try_files $uri $uri/ /index.php?$query_string;
+    }
+
+    location ~ \.php$ {
+        fastcgi_pass php:9000;
+        fastcgi_index index.php;
+        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+        include fastcgi_params;
+        fastcgi_read_timeout 60s;
+        fastcgi_hide_header X-Powered-By;
+    }
+
+    location ~ /\.(?!well-known).* {
+        deny all;
+    }
+}

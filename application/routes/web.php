@@ -2,4 +2,6 @@
 
 use Illuminate\Support\Facades\Route;
 
-Route::view('/{any?}', 'app')->where('any', '.*');
+// SPA fallback — do not swallow API / Sanctum / health / public storage URLs.
+Route::view('/{any?}', 'app')
+    ->where('any', '^(?!api(?:/|$)|sanctum(?:/|$)|up(?:/|$)|storage(?:/|$)|horizon(?:/|$)).*');
