@@ -4,6 +4,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CashboxController;
 use App\Http\Controllers\HealthController;
 use App\Http\Controllers\PaymentShowController;
+use App\Http\Controllers\WithdrawalController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -52,5 +53,13 @@ Route::middleware(['auth:sanctum'])->group(function () {
             Route::post("{cashbox}/reveal-secret", [CashboxController::class, "revealSecret"])
                 ->middleware("can:update,cashbox")
                 ->name("reveal-secret");
+        });
+
+    Route::prefix("/withdrawals")
+        ->as("withdrawal.")
+        ->group(function () {
+            Route::post("", [WithdrawalController::class, "createRequest"])
+                ->middleware(\App\Http\Middleware\IdempotenceMiddleware::class)
+                ->name("create");
         });
 });
