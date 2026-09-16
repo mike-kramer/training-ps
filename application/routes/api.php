@@ -62,4 +62,16 @@ Route::middleware(['auth:sanctum'])->group(function () {
                 ->middleware(\App\Http\Middleware\IdempotenceMiddleware::class)
                 ->name("create");
         });
+    Route::prefix("/admin")
+        ->as("admin.")
+        ->group(function () {
+            Route::prefix("/users")->as("users.")->group(function () {
+                Route::get(
+                    "",
+                    [\App\Http\Controllers\Admin\UsersController::class, "usersList"]
+                )
+                    ->middleware('can:viewList,App\Models\User')
+                    ->name("usersList");
+            });
+        });
 });
