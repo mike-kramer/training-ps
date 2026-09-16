@@ -20,10 +20,10 @@ class WithdrawalService
         \DB::beginTransaction();
         \DB::statement('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ');
         try {
-            $userPaymentsAmount = Payment::where("user_id", $user->id)
+            $userPaymentsAmount = Payment::where("cashbox_id", $withdrawalData->cashbox_id)
                 ->where("status", Payment::STATUS_PAID)
                 ->sum("amount");
-            $userWithdrawnAmount = WithdrawalRequest::where("user_id", $user->id)
+            $userWithdrawnAmount = WithdrawalRequest::where("cashbox_id", $withdrawalData->cashbox_id)
                 ->where("status", WithdrawalRequest::STATUS_SUCCESS)
                 ->sum("amount");
             $userMoneyAmount = $userPaymentsAmount - $userWithdrawnAmount;
