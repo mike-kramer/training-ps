@@ -17,14 +17,18 @@ class WithdrawalService
 
     public function createWithdrawalRequest(User $user, WithdrawalData $withdrawalData): WithdrawalRequest
     {
-        \DB::beginTransaction();
-        \DB::statement('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ');
-        try {
+        return \DB::transaction(function () use ($user, $withdrawalData) {
+            if (\DB::transactionLevel() === 1) {
+                \DB::statement('SET TRANSACTION ISOLATION LEVEL SERIALIZABLE');
+            }
             $userPaymentsAmount = Payment::where("cashbox_id", $withdrawalData->cashbox_id)
                 ->where("status", Payment::STATUS_PAID)
                 ->sum("amount");
             $userWithdrawnAmount = WithdrawalRequest::where("cashbox_id", $withdrawalData->cashbox_id)
-                ->where("status", WithdrawalRequest::STATUS_SUCCESS)
+                ->whereIn("status", [
+                    WithdrawalRequest::STATUS_SUCCESS,
+                    WithdrawalRequest::STATUS_PENDING
+                ])
                 ->sum("amount");
             $userMoneyAmount = $userPaymentsAmount - $userWithdrawnAmount;
 
@@ -47,11 +51,7 @@ class WithdrawalService
                     "request_id" => $withdrawalRequest->id,
                 ]
             );
-            \DB::commit();
-        } catch (\Throwable $e) {
-            \DB::rollback();
-            throw $e;
-        }
-        return $withdrawalRequest;
+            return $withdrawalRequest;
+        }, 3);
     }
 }
