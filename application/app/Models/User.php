@@ -7,9 +7,12 @@ use App\Policies\UserPolicy;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
+use Illuminate\Database\Eloquent\Attributes\Scope;
 use Illuminate\Database\Eloquent\Attributes\UsePolicy;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Hash;
@@ -47,11 +50,34 @@ class User extends Authenticatable
         return $this->belongsTo(Role::class);
     }
 
+    public function cashboxes(): HasMany
+    {
+        return $this->hasMany(Cashbox::class);
+    }
+
     public function hasPermission(string $permissionName): bool
     {
         $permissions = $this->role?->permissions?->map(
-            fn (Permission $permission) => $permission->name
+            fn(Permission $permission) => $permission->name
         ) ?? collect([]);
         return $permissions->contains($permissionName);
     }
+
+    #[Scope]
+    protected function hasCashbox(Builder $query, int $cashboxId): void
+    {
+        $query->select("users.*")
+            ->join("cashboxes", "cashboxes.user_id", "=", "users.id")
+            ->where("cashboxes.id", "=", $cashboxId);
+    }
+
+    #[Scope]
+    protected function hasCashboxWithName(Builder $query, string $cashboxName): void
+    {
+        $query->select("users.*")
+            ->join("cashboxes", "cashboxes.user_id", "=", "users.id")
+            ->where("cashboxes.name", "=", $cashboxName);
+    }
+
+
 }

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Cashbox;
 use App\Models\Role;
 use App\Models\User;
 use Carbon\Carbon;
@@ -81,5 +82,62 @@ class UsersListViewTest extends TestCase
                 ]
             ]);
         }
+    }
+
+    public function testEmailFiltration(): void
+    {
+        $emailPart = explode("@", $this->adminUser->email)[0];
+        $resp = $this->actingAs($this->adminUser)->get('/api/admin/users?email=' . $emailPart);
+        $resp->assertStatus(200);
+        $returnedData = $resp->json();
+        $this->assertEquals(count($returnedData["data"]), 1);
+        $this->assertEquals($returnedData["data"][0]["email"], $this->adminUser->email);
+    }
+
+    public function testCashboxIdFiltration(): void
+    {
+        $cashbox = Cashbox::factory()->state([
+            "user_id" => $this->adminUser->id,
+        ])->create();
+        $resp = $this->actingAs($this->adminUser)->get('/api/admin/users?cashbox_id=' . $cashbox->id);
+        $resp->assertStatus(200);
+        $returnedData = $resp->json();
+        $this->assertEquals(count($returnedData["data"]), 1);
+        $this->assertEquals($returnedData["data"][0]["id"], $this->adminUser->id);
+
+        $resp = $this->actingAs($this->adminUser)->get(
+            '/api/admin/users?cashbox_id=' . ($cashbox->id + 1000)
+        );
+        $resp->assertStatus(200);
+        $this->assertEquals(count($resp->json("data")), 0);
+
+    }
+
+    public function testCashboxNameFiltration(): void
+    {
+        $cashbox = Cashbox::factory()->state([
+            "user_id" => $this->adminUser->id,
+        ])->create();
+        $resp = $this->actingAs($this->adminUser)->get('/api/admin/users?cashbox_name=' . $cashbox->name);
+        $resp->assertStatus(200);
+        $returnedData = $resp->json();
+        $this->assertEquals(count($returnedData["data"]), 1);
+        $this->assertEquals($returnedData["data"][0]["id"], $this->adminUser->id);
+    }
+
+    public function testRegDateFiltration(): void
+    {
+        $requestFromDate = $this->now->subMinutes(2);
+        $resp = $this->actingAs($this->adminUser)->get('/api/admin/users?created_from=' . $requestFromDate);
+        $resp->assertStatus(200);
+        $data = $this->users->slice(0, 3)->map(function ($user) {
+            $res = $user->toArray();
+            unset($res['role']);
+            return $res;
+        })->values()->toArray();
+        $this->assertEquals(3, count($resp->json("data")));
+        $resp->assertJson([
+            "data" => $data
+        ]);
     }
 }

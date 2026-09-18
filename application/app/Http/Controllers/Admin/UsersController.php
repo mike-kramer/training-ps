@@ -13,6 +13,7 @@ class UsersController extends Controller
     {
         return $uaService->getUserList(
             $request->input('perPage', 10),
+            $request->all()
         )->toResourceCollection();
     }
 }
