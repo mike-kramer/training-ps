@@ -10,7 +10,7 @@ class UserResource extends JsonResource
     public function toArray(Request $request): array
     {
         $res = parent::toArray($request);
-        unset($res['roles']);
+        unset($res['role']);
         return $res;
     }
 }
