@@ -39,39 +39,44 @@ Route::post("payments/{paymentId}/change-status", \App\Http\Controllers\PaymentP
     ->name("payments.change-status");
 
 Route::middleware(['auth:sanctum'])->group(function () {
-    Route::prefix("/cashboxes")
-        ->as("cashbox.")
-        ->group(function () {
-            Route::get("", [CashboxController::class, "index"])->name("index");
-            Route::post("", [CashboxController::class, "create"])->name("create");
-            Route::put("{cashbox}", [CashboxController::class, "updateCashbox"])
-                ->middleware("can:update,cashbox")
-                ->name("update");
-            Route::delete("{cashbox}", [CashboxController::class, "deleteCashbox"])
-                ->middleware("can:delete,cashbox")
-                ->name("delete");
-            Route::post("{cashbox}/reveal-secret", [CashboxController::class, "revealSecret"])
-                ->middleware("can:update,cashbox")
-                ->name("reveal-secret");
-        });
-
-    Route::prefix("/withdrawals")
-        ->as("withdrawal.")
-        ->group(function () {
-            Route::post("", [WithdrawalController::class, "createRequest"])
-                ->middleware(\App\Http\Middleware\IdempotenceMiddleware::class)
-                ->name("create");
-        });
-    Route::prefix("/admin")
-        ->as("admin.")
-        ->group(function () {
-            Route::prefix("/users")->as("users.")->group(function () {
-                Route::get(
-                    "",
-                    [\App\Http\Controllers\Admin\UsersController::class, "usersList"]
-                )
-                    ->middleware('can:viewList,App\Models\User')
-                    ->name("usersList");
+    Route::middleware(\App\Http\Middleware\BlockBannedUsersMiddleware::class)->group(function () {
+        Route::prefix("/cashboxes")
+            ->as("cashbox.")
+            ->group(function () {
+                Route::get("", [CashboxController::class, "index"])->name("index");
+                Route::post("", [CashboxController::class, "create"])->name("create");
+                Route::put("{cashbox}", [CashboxController::class, "updateCashbox"])
+                    ->middleware("can:update,cashbox")
+                    ->name("update");
+                Route::delete("{cashbox}", [CashboxController::class, "deleteCashbox"])
+                    ->middleware("can:delete,cashbox")
+                    ->name("delete");
+                Route::post("{cashbox}/reveal-secret", [CashboxController::class, "revealSecret"])
+                    ->middleware("can:update,cashbox")
+                    ->name("reveal-secret");
             });
-        });
+
+        Route::prefix("/withdrawals")
+            ->as("withdrawal.")
+            ->group(function () {
+                Route::post("", [WithdrawalController::class, "createRequest"])
+                    ->middleware(\App\Http\Middleware\IdempotenceMiddleware::class)
+                    ->name("create");
+            });
+        Route::prefix("/admin")
+            ->as("admin.")
+            ->group(function () {
+                Route::prefix("/users")->as("users.")->group(function () {
+                    Route::get(
+                        "",
+                        [\App\Http\Controllers\Admin\UsersController::class, "usersList"]
+                    )
+                        ->middleware('can:viewList,App\Models\User')
+                        ->name("usersList");
+                    Route::post("/{userToBan}/ban", [\App\Http\Controllers\Admin\UsersController::class, "ban"])
+                        ->middleware('can:banUser,userToBan')
+                        ->name("ban");
+                });
+            });
+    });
 });
