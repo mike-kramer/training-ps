@@ -77,6 +77,11 @@ Route::middleware(['auth:sanctum'])->group(function () {
                         ->middleware('can:banUser,userToBan')
                         ->name("ban");
                 });
+
+                Route::prefix("/payments")->as("payments.")->group(function () {
+                    Route::get("", [\App\Http\Controllers\Admin\PaymentsController::class, "getList"])
+                        ->name("getList");
+                });
             });
     });
 });
