@@ -11,6 +11,7 @@ use Tests\TestCase;
 
 class BlockBannedUserMiddlewareTest extends TestCase
 {
+    use RefreshDatabase;
 
     public function testBlockedUser403(): void
     {

@@ -24,4 +24,9 @@ class CashboxPolicy
     {
         return $user->id === $cashbox->user_id;
     }
+
+    public function viewStatistics(User $user, Cashbox $cashbox): bool
+    {
+        return $user->id === $cashbox->user_id;
+    }
 }

@@ -14,7 +14,7 @@ class PaymentFactory extends Factory
     {
         return [
             'cashbox_id' => $this->faker->randomNumber(),
-            'order_id' => $this->faker->word(),
+            'order_id' => $this->faker->unique()->uuid(),
             'amount' => $this->faker->randomNumber(),
             'description' => $this->faker->text(),
             'status' => Payment::STATUS_PENDING,
