@@ -1,0 +1,33 @@
+---
+description: TDD and test conventions — Feature-first, full generated tests
+alwaysApply: true
+---
+
+# Testing (TDD)
+
+Write code TDD-style. Prefer **Feature** tests under `application/tests/Feature`.
+
+Use **Unit** tests only for logic that runs isolated from Laravel (e.g. signature HMAC in `SignatureService`). Unit tests may extend `PHPUnit\Framework\TestCase`.
+
+When generating tests, write **complete** coverage (happy path, validation errors, auth/policy failures, edge cases) even if some existing hand-written tests are partial.
+
+## Conventions
+
+- Feature tests: `RefreshDatabase`, factories, `$this->actingAs($user)` for Sanctum routes.
+- Mock contracts when isolating side effects (`SignatureContract`, `AuditLogContract`).
+- For audit logging assertions, use `Tests\Traits\WithAuditLogs` (`assertLog(...)`).
+- Hit API routes with `/api/...` prefixes as in `routes/api.php`.
+- Run tests via Docker: `docker compose exec -u www-data php php artisan test` (from `docker/`).
+
+```php
+// ✅ Feature: HTTP + DB + audit
+use RefreshDatabase, WithAuditLogs;
+$response = $this->actingAs($user)->post('/api/cashboxes', [...]);
+$response->assertStatus(201);
+$this->assertDatabaseHas('cashboxes', [...]);
+$this->assertLog('cashbox-created', $user->id, cashbox_id: $cashbox->id);
+
+// ✅ Unit: pure PHP, no Laravel TestCase
+$service = new SignatureService();
+$this->assertTrue($service->checkSignature($data, $key, $sig));
+```

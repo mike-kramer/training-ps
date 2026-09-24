@@ -1,0 +1,28 @@
+---
+description: Laravel layering — thin controllers, services, DTOs, no repositories
+globs: application/app/**/*.php
+alwaysApply: false
+---
+
+# Architecture
+
+Standard Laravel layout. Keep controllers thin; put business logic in `app/Services`.
+
+- **No repository layer** — services use Eloquent models/queries directly.
+- Validate with Form Requests under `app/Http/Requests/{Domain}/`.
+- Map request data to readonly DTOs in `app/Data/{Domain}/` (e.g. `toDTO()`).
+- Authorize with Policies + `can:` middleware where ownership/roles matter.
+- Bind swappable integrations via Contracts in `app/Contracts` (e.g. `SignatureContract`, `AuditLogContract`) in `AppServiceProvider`.
+- API responses: JSON arrays/`JsonResource` collections; prefer `["data" => ...]` / `["success" => true]` patterns already used in the app.
+- Domain helpers that are not full services may live under `app/Services/Assistants/`.
+
+```php
+// ✅ Controller delegates to service + DTO
+public function __invoke(PaymentCreationRequest $request, PaymentCreationService $service)
+{
+    $url = $service->createPayment($request->toDTO(), $request->header('X-Signature'));
+    return response()->json(['data' => ['url' => $url]], 201);
+}
+
+// ❌ Fat controller with Eloquent / business rules inline
+```

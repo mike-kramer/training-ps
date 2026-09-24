@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CashboxController;
+use App\Http\Controllers\CashboxStatisticsController;
 use App\Http\Controllers\HealthController;
 use App\Http\Controllers\PaymentShowController;
 use App\Http\Controllers\WithdrawalController;
@@ -54,6 +55,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
                 Route::post("{cashbox}/reveal-secret", [CashboxController::class, "revealSecret"])
                     ->middleware("can:update,cashbox")
                     ->name("reveal-secret");
+                Route::get("{cashbox}/statistics", CashboxStatisticsController::class)
+                    ->middleware("can:viewStatistics,cashbox")
+                    ->name("statistics");
             });
 
         Route::prefix("/withdrawals")
@@ -81,6 +85,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
                     Route::get("", [\App\Http\Controllers\Admin\PaymentsController::class, "getList"])
                         ->name("get-list");
                 });
+                Route::get("/statistics", \App\Http\Controllers\Admin\StatisticsController::class)
+                    ->middleware('can:viewPlatformStatistics,App\Models\Payment')
+                    ->name("statistics");
             });
     });
 });
