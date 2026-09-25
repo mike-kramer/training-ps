@@ -41,6 +41,7 @@ Route::post("payments/{paymentId}/change-status", \App\Http\Controllers\PaymentP
     ->name("payments.change-status");
 
 Route::get("/currency-rates", CurrencyRateController::class)->name("currency-rates");
+Route::get("/payments-sum", \App\Http\Controllers\PaymentStatisticsController::class)->name("payments-sum");
 
 Route::middleware(['auth:sanctum'])->group(function () {
     Route::middleware(\App\Http\Middleware\BlockBannedUsersMiddleware::class)->group(function () {
