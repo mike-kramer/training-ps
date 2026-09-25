@@ -18,6 +18,7 @@ return Application::configure(basePath: dirname(__DIR__))
     })
     ->withSchedule(function (Schedule $schedule): void {
         $schedule->command('app:cancel-old-payments')->everyFiveMinutes();
+        $schedule->command("update:cache")->twiceDaily();
         // Metrics for Horizon dashboard — only when Redis queues are used (production).
         $schedule->command('horizon:snapshot')
             ->everyFiveMinutes()

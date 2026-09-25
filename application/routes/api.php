@@ -3,6 +3,7 @@
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CashboxController;
 use App\Http\Controllers\CashboxStatisticsController;
+use App\Http\Controllers\CurrencyRateController;
 use App\Http\Controllers\HealthController;
 use App\Http\Controllers\PaymentShowController;
 use App\Http\Controllers\WithdrawalController;
@@ -38,6 +39,8 @@ Route::get("payments/{paymentId}", PaymentShowController::class)
 
 Route::post("payments/{paymentId}/change-status", \App\Http\Controllers\PaymentProcessingController::class)
     ->name("payments.change-status");
+
+Route::get("/currency-rates", CurrencyRateController::class)->name("currency-rates");
 
 Route::middleware(['auth:sanctum'])->group(function () {
     Route::middleware(\App\Http\Middleware\BlockBannedUsersMiddleware::class)->group(function () {
