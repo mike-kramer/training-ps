@@ -24,15 +24,19 @@ class IdempotenceMiddleware
         if ($request->header("Idempotence-Key") === null) {
             return response()->json(["error" => "Idempotence-Key not found"], Response::HTTP_BAD_REQUEST);
         }
-        $lock = Cache::lock('id-' . $request->header("Idempotence-Key"), 60);
+        $lock = Cache::lock('id-' . $request->header("Idempotence-Key"), 1);
         if (!$lock->get()) {
             return response(status: 409);
         }
         try {
             $cached = Cache::get($request->header("Idempotence-Key"));
             if ($cached) {
+                if ($cached == "PROCESSING") {
+                    return response(status: Response::HTTP_TOO_EARLY);
+                }
                 return response()->json($cached, Response::HTTP_OK);
             }
+            Cache::put($request->header("Idempotence-Key"), "PROCESSING");
             $response = $next($request);
             if (!$response->isSuccessful()) {
                 return $response;
