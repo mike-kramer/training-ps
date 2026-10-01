@@ -8,4 +8,9 @@ class HealthController
     {
         return ["success" => true];
     }
+
+    public function health1()
+    {
+        return ["success" => true, ["data" => "Health 1"]];
+    }
 }
