@@ -69,22 +69,45 @@ These artisan steps are **not** in the Dockerfile build — Postgres is not avai
 7. Certificate renewal (host cron):
 
    ```cron
-   0 3 * * * /opt/training-payment-system/server-docker/certbot/renew.sh >> /var/log/certbot-renew.log 2>&1
+   0 3 * * * /var/www/html/training-ps/server-docker/certbot/renew.sh >> /var/log/certbot-renew.log 2>&1
    ```
 
    Dry-run: `docker compose --profile certbot run --rm certbot renew --dry-run`
 
 ## Updates
 
+On the server (checkout at `/var/www/html/training-ps`):
+
 ```bash
-cd /path/to/repo && git pull
+cd /var/www/html/training-ps
+git pull --ff-only
 cd server-docker
-docker compose build php
-docker compose up -d php horizon scheduler nginx
-docker compose rm -f queue 2>/dev/null || true
+docker compose up -d --build php horizon scheduler nginx
 ```
 
-Rebuild + recreate runs entrypoint sync, `key:generate`, `storage:link`, and `migrate --force`. Opcache has `validate_timestamps=0` — recreating PHP containers is required after a code deploy.
+The image build copies the app into `/opt/app-src`. On start, the `php` entrypoint rsyncs it into the `app_code` volume and runs `migrate --force`. Opcache has `validate_timestamps=0`, so those containers are recreated. Certbot and `application.env` are left as they are.
+
+## GitHub Actions
+
+Workflow: `.github/workflows/deploy.yml`.
+
+1. On a GitHub-hosted runner, `docker/` starts Postgres (with `test_schema`), Redis, and PHP, then runs `php artisan test --testsuite=Feature`.
+2. If that job passes and the ref is `master`, the runner SSHs to the server and runs `git pull --ff-only`, then `docker compose up -d --build php horizon scheduler nginx` in `/var/www/html/training-ps`. Those commands live in the workflow, so the server does not need a deploy script beforehand.
+
+Triggers: push to `master`, or **Actions → Test and deploy → Run workflow**.
+
+The deploy job reads these repository secrets (**Settings → Secrets and variables → Actions**):
+
+| Secret | Value |
+|--------|--------|
+| `SSH_HOST` | Server IP or DNS name |
+| `SSH_USER` | Linux user that owns the clone and can run `docker` |
+| `SSH_PRIVATE_KEY` | Private key for that user (full OpenSSH text, including the `BEGIN`/`END` lines) |
+| `SSH_PORT` | Optional. Defaults to `22` when the secret is empty |
+
+`SSH_PRIVATE_KEY` only lets GitHub log into the server. `git pull` on the server still uses whatever remote credentials that clone already has. The server clone must be able to pull non-interactively.
+
+Do not use a larger runner. In the GitHub billing settings, set the Actions spending limit to `$0` so a minute overrun stops the job instead of charging the account.
 
 ## Notes
 

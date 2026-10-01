@@ -1,0 +1,111 @@
+name: Test and deploy
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  feature-tests:
+    name: Feature tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Write Laravel env for Postgres
+        working-directory: application
+        run: |
+          cat > .env <<'EOF'
+          APP_NAME=TrainingPS
+          APP_ENV=testing
+          APP_KEY=
+          APP_DEBUG=true
+          APP_URL=http://localhost
+
+          DB_CONNECTION=pgsql
+          DB_HOST=db
+          DB_PORT=5432
+          DB_DATABASE=training-ps
+          DB_USERNAME=training-ps
+          DB_PASSWORD=secret
+
+          CACHE_STORE=array
+          SESSION_DRIVER=array
+          QUEUE_CONNECTION=sync
+          MAIL_MAILER=array
+
+          REDIS_CLIENT=phpredis
+          REDIS_HOST=redis
+          REDIS_PASSWORD=secret
+          REDIS_PORT=6379
+          EOF
+
+      - name: Start Postgres, Redis, and PHP
+        working-directory: docker
+        run: |
+          export PUID="$(id -u)"
+          export PGID="$(id -g)"
+          export POSTGRES_DB=training-ps
+          export POSTGRES_USER=training-ps
+          export POSTGRES_PASSWORD=secret
+          export REDIS_PASSWORD=secret
+          docker compose up -d --build --wait db redis php
+
+      - name: Install Composer dependencies
+        working-directory: docker
+        run: docker compose exec -T -u www-data php composer install --no-interaction --prefer-dist
+
+      - name: Generate application key
+        working-directory: docker
+        run: docker compose exec -T -u www-data php php artisan key:generate --force --no-interaction
+
+      - name: Run feature tests
+        working-directory: docker
+        run: docker compose exec -T -u www-data php php artisan test --testsuite=Feature
+
+  deploy:
+    name: Deploy
+    needs: feature-tests
+    if: github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Deploy over SSH
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_PORT: ${{ secrets.SSH_PORT }}
+        run: |
+          if [ -z "$SSH_HOST" ] || [ -z "$SSH_USER" ] || [ -z "$SSH_PRIVATE_KEY" ]; then
+            echo "Missing SSH_HOST, SSH_USER, or SSH_PRIVATE_KEY repository secret."
+            exit 1
+          fi
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          port="${SSH_PORT:-22}"
+          ssh-keyscan -p "$port" -H "$SSH_HOST" >> ~/.ssh/known_hosts
+          ssh -i ~/.ssh/deploy_key \
+            -p "$port" \
+            -o IdentitiesOnly=yes \
+            "${SSH_USER}@${SSH_HOST}" \
+            "bash -s" <<'EOF'
+          set -euo pipefail
+          cd /var/www/html/training-ps
+          git pull --ff-only
+          cd server-docker
+          docker compose up -d --build php horizon scheduler nginx
+          EOF
