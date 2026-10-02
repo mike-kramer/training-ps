@@ -13,4 +13,14 @@ class HealthController
     {
         return ["success" => true, ["data" => "Health 1"]];
     }
+
+    public function health2()
+    {
+        return [
+            "success" => true,
+            "data" => [
+                "message" => "Health 2"
+            ]
+        ];
+    }
 }

@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::get("/health", HealthController::class);
 Route::get("/health1", [HealthController::class, "health1"]);
+Route::get("/health2", [HealthController::class, "health2"]);
 
 Route::prefix("/auth")
     ->as("auth.")
